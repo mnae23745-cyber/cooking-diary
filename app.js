@@ -387,7 +387,7 @@ function openLogForm(recipe, existing) {
       <div class="star-pick">${[1, 2, 3, 4, 5].map((n) => `<button type="button" data-star="${n}">★</button>`).join("")}</div>
       <label>사진 <span class="hint">완성된 요리 한 장</span></label>
       <div id="photoBox" class="photo-box"></div>
-      <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
+      <input type="file" id="photoInput" accept="image/*" hidden>
       <label>재료 <span class="hint">이 요리의 재료. 고치면 레시피에 저장돼요</span></label>
       <textarea name="ingredients" placeholder="김치 1/4포기&#10;돼지고기 200g">${esc(recipe.ingredients)}</textarea>
       <label>바꾼 점 <span class="hint">레시피나 지난번과 다르게 한 것</span></label>
@@ -412,7 +412,7 @@ function openLogForm(recipe, existing) {
   const paintPhoto = () => {
     photoBox.innerHTML = photo
       ? `<img src="${photo}" alt=""><button type="button" class="photo-remove" aria-label="사진 삭제">✕</button>`
-      : `<button type="button" class="btn ghost" id="photoPick">📷 사진 추가</button>`;
+      : `<button type="button" class="btn ghost" id="photoPick">📷 사진 추가 <span class="hint">카메라 또는 갤러리</span></button>`;
     photoBox.querySelector("#photoPick")?.addEventListener("click", () => photoInput.click());
     photoBox.querySelector("img")?.addEventListener("click", () => photoInput.click());
     photoBox.querySelector(".photo-remove")?.addEventListener("click", () => { photo = null; paintPhoto(); });

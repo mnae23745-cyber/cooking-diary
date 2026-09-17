@@ -1,6 +1,6 @@
 // 인터넷이 없어도 앱이 열리게 파일을 폰에 저장해두는 역할 (service worker)
 // 앱 파일을 고치고 올릴 때 아래 버전 글자를 바꾸면 폰에서도 새 파일을 받아요.
-const CACHE = "cooking-diary-v1";
+const CACHE = "cooking-diary-v2";
 const ASSETS = ["./", "./index.html", "./style.css", "./app.js", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {
