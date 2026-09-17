@@ -1,0 +1,178 @@
+/* ===== 색상 ===== */
+:root {
+  --bg: #faf7f2;
+  --card: #ffffff;
+  --text: #2b2622;
+  --sub: #857b72;
+  --line: #e8e1d8;
+  --accent: #e0673a;
+  --accent-soft: #fbe9e1;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1917;
+    --card: #292524;
+    --text: #f5f0eb;
+    --sub: #a8a29e;
+    --line: #3f3a36;
+    --accent: #f08556;
+    --accent-soft: #3b2a22;
+  }
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, "Pretendard", "Malgun Gothic", sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.hidden { display: none !important; }
+
+/* ===== 상단 바 ===== */
+.topbar {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: 8px;
+  padding: calc(10px + env(safe-area-inset-top)) 12px 10px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.topbar h1 { flex: 1; margin: 0; font-size: 19px; }
+.icon-btn {
+  border: none; background: none; color: var(--text);
+  font-size: 22px; width: 44px; height: 44px; border-radius: 10px; cursor: pointer;
+}
+.icon-btn:hover { background: var(--line); }
+
+main { max-width: 640px; margin: 0 auto; padding: 16px 16px calc(100px + env(safe-area-inset-bottom)); }
+
+/* ===== 검색 ===== */
+.search {
+  width: 100%; padding: 12px 14px; margin-bottom: 16px;
+  border: 1px solid var(--line); border-radius: 12px;
+  background: var(--card); color: var(--text); font-size: 16px;
+}
+
+/* ===== 필터 칩 ===== */
+.chips { display: flex; gap: 8px; margin: -6px 0 14px; flex-wrap: wrap; }
+.chip {
+  border: 1px solid var(--line); background: var(--card); color: var(--sub);
+  border-radius: 999px; padding: 8px 16px; font-size: 14px; cursor: pointer; min-height: 38px;
+}
+.chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ===== 레시피 카드 목록 ===== */
+.card {
+  display: flex; gap: 12px; padding: 12px; margin-bottom: 12px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  cursor: pointer;
+}
+.card:hover { border-color: var(--accent); }
+.thumb {
+  width: 110px; aspect-ratio: 16/9; flex-shrink: 0;
+  border-radius: 8px; object-fit: cover; background: var(--line);
+  display: flex; align-items: center; justify-content: center; font-size: 28px;
+}
+.card-body { min-width: 0; }
+.card-title { font-weight: 700; margin: 0 0 4px; }
+.card-meta { color: var(--sub); font-size: 13px; }
+
+.tag {
+  display: inline-block; padding: 2px 8px; margin: 2px 4px 2px 0;
+  background: var(--accent-soft); color: var(--accent);
+  border-radius: 999px; font-size: 12px;
+}
+
+.empty { text-align: center; color: var(--sub); padding: 60px 20px; }
+.empty .big { font-size: 48px; }
+
+/* ===== 상세 화면 ===== */
+.info-line { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.sub { color: var(--sub); font-size: 14px; font-weight: 400; }
+.section { margin-top: 24px; }
+.section h2 { font-size: 16px; margin: 0 0 8px; display: flex; gap: 8px; align-items: baseline; }
+.box {
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  padding: 12px 14px;
+}
+.log { margin-bottom: 10px; }
+.log.latest { border: 2px solid var(--accent); }
+.log.older { opacity: .8; }
+.log-text { white-space: pre-wrap; }
+.log-head { display: flex; justify-content: space-between; align-items: center; color: var(--sub); font-size: 13px; }
+.log-label { font-size: 12px; color: var(--sub); margin-top: 8px; }
+.stars { color: #f5a524; letter-spacing: 1px; }
+.link { color: var(--accent); word-break: break-all; }
+.steps { padding-left: 32px; margin: 0 0 8px; }
+.steps li { margin-bottom: 8px; }
+details summary { cursor: pointer; margin-bottom: 8px; list-style: none; }
+details summary::before { content: "▸ "; }
+details[open] summary::before { content: "▾ "; }
+/* ===== 사진 ===== */
+.log-photo { width: 100%; max-height: 260px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; display: block; }
+.log-photo.small { max-height: 140px; }
+.photo-box { position: relative; }
+.photo-box img { width: 100%; max-height: 220px; object-fit: cover; border-radius: 10px; display: block; cursor: pointer; }
+.photo-remove {
+  position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 50%;
+  border: none; background: rgba(0,0,0,.6); color: #fff; font-size: 14px; cursor: pointer;
+}
+.radio-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.radio-row label { font-weight: 400; margin: 4px 0; display: flex; align-items: center; gap: 6px; }
+
+.pick { text-align: center; }
+.pick-thumb {
+  width: 100%; max-width: 280px; aspect-ratio: 16/9; object-fit: cover; border-radius: 12px;
+  background: var(--line); display: flex; align-items: center; justify-content: center; font-size: 48px; margin: 0 auto 12px;
+}
+.pick-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.prev {
+  background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; font-size: 14px; margin-bottom: 4px;
+}
+.prev .log-label { margin-top: 0; margin-bottom: 4px; }
+select {
+  width: 100%; padding: 10px 12px; font-size: 16px; font-family: inherit;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--text);
+}
+
+/* ===== 버튼 ===== */
+.btn {
+  border: none; border-radius: 10px; padding: 10px 16px; font-size: 15px; cursor: pointer;
+  background: var(--accent); color: #fff; font-weight: 600;
+}
+.btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+.btn.danger { background: transparent; color: #d33; border: 1px solid var(--line); }
+.btn.small { padding: 8px 14px; font-size: 14px; min-height: 38px; }
+.btn.wide { width: 100%; padding: 14px; font-size: 16px; margin-top: 20px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.fab {
+  position: fixed; right: 20px; bottom: calc(24px + env(safe-area-inset-bottom));
+  width: 58px; height: 58px; border-radius: 50%; border: none;
+  background: var(--accent); color: #fff; font-size: 30px; cursor: pointer;
+  box-shadow: 0 6px 16px rgba(0,0,0,.2);
+}
+
+/* ===== 입력 창 ===== */
+dialog {
+  width: min(560px, calc(100% - 24px)); max-height: 90vh;
+  border: none; border-radius: 16px; padding: 20px;
+  background: var(--bg); color: var(--text);
+}
+dialog::backdrop { background: rgba(0,0,0,.45); }
+dialog h3 { margin: 0 0 16px; }
+label { display: block; font-size: 14px; font-weight: 600; margin: 12px 0 4px; }
+.hint { font-weight: 400; color: var(--sub); font-size: 12px; }
+input[type=text], input[type=url], input[type=date], textarea {
+  width: 100%; padding: 10px 12px; font-size: 16px; font-family: inherit;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--card); color: var(--text);
+}
+textarea { min-height: 80px; resize: vertical; }
+.star-pick button {
+  border: none; background: none; font-size: 30px; cursor: pointer; color: var(--line); padding: 0 2px;
+}
+.star-pick button.on { color: #f5a524; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
