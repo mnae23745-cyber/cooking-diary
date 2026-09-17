@@ -301,14 +301,24 @@ function logHtml(l, big) {
 }
 
 // ----- 4. 입력 창 -----
+// preset.quick: 공유로 들어온 링크를 빠르게 저장하는 짧은 창 (재료·만드는 법은 나중에)
 function openRecipeForm(existing, preset = {}) {
   const r = existing || preset;
+  const quick = !existing && preset.quick;
   const sourceOptions = ["book", "family", "mine"]
     .map((k) => `<option value="${k}" ${r.source === k ? "selected" : ""}>${SOURCES[k].icon} ${SOURCES[k].label}</option>`)
     .join("");
+  const detailFields = quick ? "" : `
+      <label>몇 인분</label>
+      <input type="text" name="servings" inputmode="numeric" placeholder="2" value="${esc(r.servings)}">
+      <label>재료 <span class="hint">한 줄에 하나씩</span></label>
+      <textarea name="ingredients" placeholder="김치 1/4포기&#10;돼지고기 200g">${esc(r.ingredients)}</textarea>
+      <label>만드는 법 <span class="hint">선택</span></label>
+      <textarea name="steps" placeholder="1. 김치를 볶는다&#10;2. 물을 붓고 끓인다">${esc(r.steps)}</textarea>`;
   dialog.innerHTML = `
     <form method="dialog" id="form">
-      <h3>${existing ? "레시피 수정" : "새 요리"}</h3>
+      <h3>${existing ? "레시피 수정" : quick ? "다음에 만들어 볼 요리" : "새 요리"}</h3>
+      ${quick ? `<p class="hint" style="margin:-8px 0 4px">저장해두면 "해먹고 싶은" 목록에 들어가요. 재료·기록은 만들 때 채우면 돼요.</p>` : ""}
       <label>링크 <span class="hint">유튜브·쇼츠·릴스·블로그 주소를 붙여넣으면 이름이 자동으로 채워져요</span></label>
       <input type="url" name="url" placeholder="https://youtu.be/..." value="${esc(r.url)}" ${existing ? "" : "autofocus"}>
       <label>요리 이름 * <span class="hint" id="titleHint"></span></label>
@@ -317,12 +327,7 @@ function openRecipeForm(existing, preset = {}) {
         <label>링크가 없다면 출처는?</label>
         <select name="source">${sourceOptions}</select>
       </div>
-      <label>몇 인분</label>
-      <input type="text" name="servings" inputmode="numeric" placeholder="2" value="${esc(r.servings)}">
-      <label>재료 <span class="hint">한 줄에 하나씩</span></label>
-      <textarea name="ingredients" placeholder="김치 1/4포기&#10;돼지고기 200g">${esc(r.ingredients)}</textarea>
-      <label>만드는 법 <span class="hint">선택</span></label>
-      <textarea name="steps" placeholder="1. 김치를 볶는다&#10;2. 물을 붓고 끓인다">${esc(r.steps)}</textarea>
+      ${detailFields}
       <label>태그 <span class="hint">쉼표로 구분</span></label>
       <input type="text" name="tags" placeholder="찌개, 한식, 자취" value="${esc(r.tags)}">
       <div class="dialog-actions">
@@ -344,7 +349,8 @@ function openRecipeForm(existing, preset = {}) {
     lastFetched = url;
     const hint = document.getElementById("titleHint");
     hint.textContent = "제목 가져오는 중…";
-    const title = await fetchTitle(url);
+    // 유튜브가 제목을 안 주는 영상(쇼츠 일부)은 공유할 때 같이 넘어온 제목을 씀
+    const title = (await fetchTitle(url)) || preset.sharedTitle || "";
     if (title && !titleInput.value.trim()) { titleInput.value = title; hint.textContent = "자동 입력됨 · 고쳐도 돼요"; }
     else hint.textContent = title ? "" : "제목을 못 가져왔어요. 직접 적어주세요";
   };
@@ -677,8 +683,12 @@ render();
   const shared = [params.get("url"), params.get("text"), params.get("title")].filter(Boolean).join(" ");
   const link = shared.match(/https?:\/\/\S+/)?.[0];
   if (link) {
+    // 링크를 뺀 나머지 글자가 영상 제목인 경우가 많음 ("YouTube" 같은 앱 이름만 남으면 버림)
+    let sharedTitle = shared.replace(/https?:\/\/\S+/g, "").replace(/\s+/g, " ").trim();
+    if (/^(youtube|instagram|tiktok|check out this (video|short))[!.]*$/i.test(sharedTitle)) sharedTitle = "";
     history.replaceState(null, "", location.pathname); // 새로고침해도 창이 다시 안 뜨게
-    fetch("api/status").then((r) => r.json()).then((s) => { serverOk = !!s.video; }).catch(() => {}).finally(() => openRecipeForm(null, { url: link }));
+    fetch("api/status").then((r) => r.json()).then((s) => { serverOk = !!s.video; }).catch(() => {})
+      .finally(() => openRecipeForm(null, { url: link, quick: true, sharedTitle }));
   }
 }
 
