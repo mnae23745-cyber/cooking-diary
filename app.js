@@ -328,7 +328,7 @@ function openRecipeForm(existing, preset = {}) {
         <select name="source">${sourceOptions}</select>
       </div>
       ${detailFields}
-      <label>태그 <span class="hint">쉼표로 구분</span></label>
+      <label>태그 <span class="hint">쉼표로 구분 · 이름을 보고 자동으로 채워져요</span></label>
       <input type="text" name="tags" placeholder="찌개, 한식, 자취" value="${esc(r.tags)}">
       <div class="dialog-actions">
         <button type="button" class="btn ghost" id="cancel">취소</button>
@@ -341,6 +341,15 @@ function openRecipeForm(existing, preset = {}) {
   const titleInput = dialog.querySelector("[name=title]");
   urlInput.oninput = () => document.getElementById("sourceRow").classList.toggle("hidden", !!urlInput.value.trim());
 
+  // 태그가 비어 있으면 제목을 보고 자동으로 채움
+  const tagsInput = dialog.querySelector("[name=tags]");
+  const suggestTags = (text) => {
+    if (tagsInput.value.trim()) return;
+    const tags = autoTags(text);
+    if (tags.length) tagsInput.value = tags.join(", ");
+  };
+  titleInput.addEventListener("change", () => suggestTags(titleInput.value));
+
   // 링크를 넣으면 제목을 읽어와서 요리 이름을 채움 (이름이 비어 있을 때만)
   let lastFetched = "";
   const autoTitle = async () => {
@@ -350,9 +359,13 @@ function openRecipeForm(existing, preset = {}) {
     const hint = document.getElementById("titleHint");
     hint.textContent = "제목 가져오는 중…";
     // 유튜브가 제목을 안 주는 영상(쇼츠 일부)은 공유할 때 같이 넘어온 제목을 씀
-    const title = (await fetchTitle(url)) || preset.sharedTitle || "";
-    if (title && !titleInput.value.trim()) { titleInput.value = title; hint.textContent = "자동 입력됨 · 고쳐도 돼요"; }
-    else hint.textContent = title ? "" : "제목을 못 가져왔어요. 직접 적어주세요";
+    const raw = (await fetchTitle(url)) || preset.sharedTitle || "";
+    const title = stripHashtags(raw);
+    if (title && !titleInput.value.trim()) {
+      titleInput.value = title;
+      hint.textContent = "자동 입력됨 · 고쳐도 돼요";
+      suggestTags(raw + " " + (preset.sharedTitle || "")); // #태그는 제목에서 빼고 태그 칸으로
+    } else hint.textContent = title ? "" : "제목을 못 가져왔어요. 직접 적어주세요";
   };
   urlInput.addEventListener("change", autoTitle);
   urlInput.addEventListener("paste", () => setTimeout(autoTitle, 50));
@@ -568,6 +581,52 @@ async function importFromVideo(r) {
   };
   paint();
 }
+
+// ----- 4-2. 제목에서 태그 자동 추천 -----
+// 제목에 #태그가 있으면 그대로, 없으면 아래 단어 표로 붙임. 저장 전에 고칠 수 있음.
+const TAG_RULES = [
+  // 분류
+  ["한식", /김치|된장|고추장|불고기|비빔|떡볶이|제육|잡채|갈비|삼겹|나물|국밥|찌개|전골|김밥|순두부|미역국|잔치국수|칼국수|수제비|떡국/],
+  ["중식", /짜장|짬뽕|마파|탕수육|깐풍|유린기|꿔바로우|마라|고추잡채|양장피|멘보샤/],
+  ["일식", /스시|초밥|라멘|우동|돈까스|돈카츠|규동|가라아게|오코노미|타코야키|미소|카레|규카츠|오야코동|텐동/],
+  ["양식", /파스타|스테이크|리조또|리조토|피자|샐러드|스프|수프|그라탕|햄버거|샌드위치|토스트|오믈렛|감바스|라자냐/],
+  ["분식", /떡볶이|김밥|순대|어묵|튀김|라볶이|쫄면/],
+  // 요리 종류
+  ["찌개", /찌개|전골/],
+  ["국", /국(?![수물])|탕(?!수)/],
+  ["볶음", /볶음/],
+  ["조림", /조림/],
+  ["구이", /구이|스테이크|그릴/],
+  ["튀김", /튀김|까스|카츠|프라이드|가라아게/],
+  ["면", /면(?!역)|국수|파스타|라면|우동|짜장|짬뽕|라멘|스파게티/],
+  ["밥", /밥(?!상)|덮밥|비빔밥|볶음밥|김밥|리조또|리조토|규동|카레/],
+  ["찜", /찜/],
+  ["전", /전(?![골자체부])/],
+  ["무침", /무침|나물/],
+  ["샐러드", /샐러드/],
+  ["디저트", /디저트|케이크|쿠키|빵|베이킹|마카롱|푸딩|아이스크림/],
+  ["반찬", /반찬|밑반찬|장아찌|나물|조림|무침/],
+  // 주재료
+  ["감자", /감자/], ["고구마", /고구마/], ["닭", /닭|치킨|가라아게/], ["돼지고기", /돼지|삼겹|목살|제육|앞다리|보쌈|돈까스|돈카츠/],
+  ["소고기", /소고기|불고기|갈비|스테이크|차돌|우삼겹|규동/], ["계란", /계란|달걀|에그|오믈렛|계란말이/], ["두부", /두부|순두부/],
+  ["새우", /새우|감바스/], ["오징어", /오징어/], ["고등어", /고등어/], ["연어", /연어/], ["참치", /참치/], ["버섯", /버섯/],
+  ["김치", /김치/], ["콩나물", /콩나물/], ["애호박", /애호박/], ["가지", /가지/], ["시금치", /시금치/], ["양배추", /양배추/],
+  ["떡", /떡(?![볶])/], ["치즈", /치즈/],
+  // 기타
+  ["자취", /자취|간단|초간단|초스피드|10분|5분|1인/],
+  ["다이어트", /다이어트|저칼로리|저탄|키토|헬스/],
+  ["도시락", /도시락/],
+  ["안주", /안주|술/],
+];
+const TAG_SKIP = /^(shorts?|youtube|유튜브|recipe|레시피|요리|먹방|cooking|food|fyp|viral|asmr)$/i;
+
+function autoTags(text) {
+  const hash = [...(text || "").matchAll(/#([^\s#,]+)/g)].map((m) => m[1]).filter((t) => !TAG_SKIP.test(t));
+  const plain = (text || "").replace(/#[^\s#,]+/g, " ");
+  const found = TAG_RULES.filter(([, re]) => re.test(plain)).map(([tag]) => tag);
+  return [...new Set([...hash, ...found])].slice(0, 6);
+}
+const stripHashtags = (s) => (s || "").replace(/#[^\s#,]+/g, " ").replace(/\s+/g, " ").trim();
 
 // ----- 5. 오늘 뭐 먹지? -----
 // 내가 저장한 요리 중에서 하나 골라줌.
