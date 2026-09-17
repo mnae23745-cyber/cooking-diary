@@ -692,5 +692,8 @@ render();
   }
 }
 
-// 홈 화면에 설치한 앱이 인터넷 없이도 열리게 (sw.js 등록)
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});
+// 홈 화면에 설치한 앱이 인터넷 없이도 열리게 (sw.js 등록). 새 버전이 준비되면 입력 중이 아닐 때 화면을 새로 고침
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js").catch(() => {});
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (!dialog.open) location.reload(); });
+}
