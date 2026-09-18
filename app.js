@@ -166,7 +166,8 @@ function renderList() {
 
   const q = searchText.trim().toLowerCase();
   const todoCount = recipes.filter((r) => r.logs.length === 0).length;
-  const base = recipes.filter((r) => listFilter === "all" || (listFilter === "todo" ? r.logs.length === 0 : r.logs.length > 0));
+  // 뒤집어서 시작 → 같은 날 저장한 것끼리는 나중에 저장한 게 위로
+  const base = [...recipes].reverse().filter((r) => listFilter === "all" || (listFilter === "todo" ? r.logs.length === 0 : r.logs.length > 0));
 
   // 지금 보고 있는 탭에서 많이 쓰인 태그 8개를 분류 칩으로
   const tagCounts = {};
@@ -391,7 +392,12 @@ function openRecipeForm(existing, preset = {}) {
     } else {
       const created = { id: newId(), createdAt: today(), logs: [], ...data };
       recipes.push(created);
-      currentId = created.id;
+      if (quick) { // 공유로 빠르게 저장한 건 "해먹고 싶은" 목록에서 바로 확인
+        currentId = null;
+        listFilter = "todo";
+        tagFilter = null;
+        searchText = "";
+      } else currentId = created.id;
     }
   });
 }
