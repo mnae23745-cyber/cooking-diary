@@ -75,8 +75,8 @@ main { max-width: 640px; margin: 0 auto; padding: 16px 16px calc(100px + env(saf
 }
 .card:hover { border-color: var(--accent); }
 .thumb {
-  width: 110px; aspect-ratio: 16/9; flex-shrink: 0;
-  border-radius: 8px; object-fit: cover; background: var(--line);
+  width: 76px; height: 76px; flex-shrink: 0;
+  border-radius: 10px; object-fit: cover; background: var(--line);
   display: flex; align-items: center; justify-content: center; font-size: 28px;
 }
 .card-body { min-width: 0; }

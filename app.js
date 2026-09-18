@@ -120,11 +120,23 @@ function shrinkImage(file, maxSize = 800) {
 }
 
 // 목록/추천에 쓸 대표 이미지: 설정에 따라 내 사진 또는 유튜브 썸네일
+// 쇼츠는 세로 영상이라 가로 썸네일(mqdefault)에 검은 띠가 생김 → 세로 썸네일(oar2)을 씀
 function thumbOf(r) {
   const photo = sortedLogs(r).find((l) => l.photo)?.photo;
   const vid = youtubeId(r.url);
-  const yt = vid ? `https://i.ytimg.com/vi/${vid}/mqdefault.jpg` : null;
+  const isShort = /\/shorts\//.test(r.url || "");
+  const yt = vid ? `https://i.ytimg.com/vi/${vid}/${isShort ? "oar2" : "mqdefault"}.jpg` : null;
   return settings.thumb === "youtube" ? yt || photo : photo || yt;
+}
+
+// 썸네일 <img>. 유튜브에 그 파일이 없으면 120px짜리 회색 그림이 와서, 그땐 기본 썸네일로 바꿈
+function thumbImg(r, cls) {
+  const src = thumbOf(r);
+  if (!src) return "";
+  const vid = youtubeId(r.url);
+  const fallback = vid && src.includes("/oar2.jpg") ? `https://i.ytimg.com/vi/${vid}/hqdefault.jpg` : "";
+  const swap = "if(this.dataset.fb&&this.naturalWidth<=120){this.src=this.dataset.fb;this.dataset.fb=''}";
+  return `<img class="${cls}" src="${src}" alt="" data-fb="${fallback}" onload="${swap}" onerror="${swap}">`;
 }
 
 const stars = (n) => "★".repeat(n) + "☆".repeat(5 - n);
@@ -218,9 +230,8 @@ function renderList() {
 }
 
 function cardHtml(r) {
-  const img = thumbOf(r);
   const src = SOURCES[sourceOf(r)];
-  const thumb = img ? `<img class="thumb" src="${img}" alt="">` : `<div class="thumb">${src.icon}</div>`;
+  const thumb = thumbImg(r, "thumb") || `<div class="thumb">${src.icon}</div>`;
   const n = r.logs.length;
   const meta = n ? `${n}번 만듦 · ${fmtDate(lastCooked(r))}` : "아직 안 만듦";
   const tags = splitTags(r.tags).map((t) => `<span class="tag">${esc(t)}</span>`).join("");
@@ -671,11 +682,10 @@ function openPick() {
   lastPick = r;
   const latest = sortedLogs(r)[0];
   const src = SOURCES[sourceOf(r)];
-  const img = thumbOf(r);
   dialog.innerHTML = `
     <h3>오늘은 이거 어때요?</h3>
     <div class="pick">
-      ${img ? `<img class="pick-thumb" src="${img}" alt="">` : `<div class="pick-thumb">${src.icon}</div>`}
+      ${thumbImg(r, "pick-thumb") || `<div class="pick-thumb">${src.icon}</div>`}
       <div class="pick-title">${esc(r.title)}</div>
       <div class="sub">${r.logs.length ? `${r.logs.length}번 만듦 · 마지막 ${fmtDate(latest.date)} <span class="stars">${stars(latest.rating)}</span>` : "아직 안 만들어본 요리"}</div>
       ${latest?.review ? `<div class="sub" style="margin-top:6px">"${esc(latest.review)}"</div>` : ""}
