@@ -50,6 +50,12 @@ async function fetchTitle(url) {
     } catch {}
   }
   const vid = youtubeId(url);
+  if (vid && settings.ytKey) { // 유튜브 API 키가 있으면 쇼츠 제목도 확실하게 가져옴
+    try {
+      const v = await youtubeApi("videos", { part: "snippet", id: vid });
+      if (v.items?.[0]) return v.items[0].snippet.title;
+    } catch {}
+  }
   const tries = vid
     ? [`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${vid}`)}`]
     : [];
@@ -265,7 +271,7 @@ function renderDetail(r) {
     </div>
     <div>${splitTags(r.tags).map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>
 
-    ${serverOk && youtubeId(r.url)
+    ${youtubeId(r.url)
       ? `<button class="btn ghost small" id="extractBtn" style="margin-top:12px">📋 영상 소개란·댓글에서 레시피 가져오기</button>`
       : ""}
 
@@ -551,14 +557,57 @@ function parseRecipeText(text) {
   return { ingredients, steps };
 }
 
+// 유튜브 공식 API (설정에 넣은 키 사용). 폰에서는 server.py 대신 이걸로 소개란·댓글을 읽음
+async function youtubeApi(path, params) {
+  const res = await fetch(`https://www.googleapis.com/youtube/v3/${path}?${new URLSearchParams({ ...params, key: settings.ytKey })}`);
+  const json = await res.json();
+  if (!res.ok) {
+    const msg = json.error?.message || "";
+    if (/API key not valid/i.test(msg)) throw new Error("API 키가 올바르지 않아요. ⋯ 설정에서 키를 다시 확인해주세요.");
+    if (/referer|referrer|blocked/i.test(msg)) throw new Error("이 키는 이 주소에서 못 쓰게 잠겨 있어요. 구글 클라우드의 '웹사이트 제한'에 앱 주소가 들어 있는지 확인해주세요.");
+    if (/quota/i.test(msg)) throw new Error("오늘 무료 사용량을 다 썼어요. 내일 다시 돼요.");
+    if (/not been used|disabled/i.test(msg)) throw new Error("구글 클라우드에서 'YouTube Data API v3'를 아직 사용 설정하지 않았어요.");
+    throw new Error(msg || "유튜브 API 오류");
+  }
+  return json;
+}
+
+async function fetchVideoData(url) {
+  if (serverOk) {
+    const res = await fetch(`api/video?url=${encodeURIComponent(url)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "실패");
+    return data;
+  }
+  const vid = youtubeId(url);
+  const v = await youtubeApi("videos", { part: "snippet", id: vid });
+  if (!v.items?.length) throw new Error("영상을 찾지 못했어요.");
+  let comments = [];
+  try {
+    const c = await youtubeApi("commentThreads", { part: "snippet", videoId: vid, order: "relevance", maxResults: 30, textFormat: "plainText" });
+    comments = c.items.map((it) => {
+      const s = it.snippet.topLevelComment.snippet;
+      return { author: s.authorDisplayName, text: s.textDisplay, heart: false };
+    });
+  } catch {} // 댓글이 막힌 영상은 소개란만
+  return { title: v.items[0].snippet.title, description: v.items[0].snippet.description, comments };
+}
+
 async function importFromVideo(r) {
+  if (!serverOk && !settings.ytKey) {
+    dialog.innerHTML = `<h3>유튜브 API 키가 필요해요</h3>
+      <p class="hint" style="font-size:14px">폰에서 영상 소개란·댓글을 읽으려면 구글에서 무료로 받는 키가 있어야 해요. 오른쪽 위 ⋯ 설정에서 키를 넣어주세요.</p>
+      <div class="dialog-actions"><button class="btn ghost" id="cancel">닫기</button><button class="btn" id="goSettings">설정 열기</button></div>`;
+    document.getElementById("cancel").onclick = () => dialog.close();
+    document.getElementById("goSettings").onclick = () => { dialog.close(); document.getElementById("menuBtn").click(); };
+    dialog.showModal();
+    return;
+  }
   dialog.innerHTML = `<h3>영상 읽는 중…</h3><p class="hint" style="font-size:14px">소개란과 댓글을 가져오고 있어요.</p>`;
   dialog.showModal();
   let data;
   try {
-    const res = await fetch(`api/video?url=${encodeURIComponent(r.url)}`);
-    data = await res.json();
-    if (!res.ok) throw new Error(data.error || "실패");
+    data = await fetchVideoData(r.url);
   } catch (e) {
     dialog.innerHTML = `<h3>가져오지 못했어요</h3><p class="hint" style="font-size:14px">${esc(e.message)}</p>
       <div class="dialog-actions"><button class="btn ghost" id="cancel">닫기</button></div>`;
@@ -719,6 +768,9 @@ document.getElementById("menuBtn").onclick = () => {
     </div>
     <p class="hint">내 사진이 없으면 유튜브 썸네일을, 둘 다 없으면 출처 아이콘을 보여줘요.</p>
 
+    <label style="margin-top:20px">유튜브 API 키 <span class="hint">영상 소개란·댓글에서 레시피 가져오기용 · 이 기기에만 저장돼요</span></label>
+    <input type="text" id="ytKey" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="AIza..." value="${esc(settings.ytKey || "")}">
+
     <h3 style="margin-top:24px">백업</h3>
     <p class="hint" style="font-size:14px">데이터는 이 브라우저 안에만 저장돼요 (지금 약 ${used}KB, 최대 5,000KB 정도). 브라우저 기록을 지우면 사라질 수 있으니 가끔 백업 파일로 저장해두세요.</p>
     <div class="row" style="margin-top:12px">
@@ -729,6 +781,7 @@ document.getElementById("menuBtn").onclick = () => {
   dialog.querySelectorAll("[name=thumb]").forEach((el) =>
     el.addEventListener("change", () => { settings.thumb = el.value; saveSettings(); render(); })
   );
+  document.getElementById("ytKey").onchange = (e) => { settings.ytKey = e.target.value.trim(); saveSettings(); };
   document.getElementById("cancel").onclick = () => dialog.close();
   document.getElementById("exportBtn").onclick = () => {
     const blob = new Blob([JSON.stringify(recipes, null, 2)], { type: "application/json" });
