@@ -62,6 +62,10 @@ main { max-width: 640px; margin: 0 auto; padding: 16px 16px calc(100px + env(saf
   border-radius: 999px; padding: 8px 16px; font-size: 14px; cursor: pointer; min-height: 38px;
 }
 .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+/* 분류(태그) 칩: 한 줄로 옆으로 밀어서 보기 */
+.tag-row { flex-wrap: nowrap; overflow-x: auto; margin-top: -6px; padding-bottom: 2px; scrollbar-width: none; }
+.tag-row::-webkit-scrollbar { display: none; }
+.tag-chip { flex-shrink: 0; white-space: nowrap; background: var(--accent-soft); border-color: transparent; color: var(--accent); font-size: 13px; padding: 6px 12px; min-height: 34px; }
 
 /* ===== 레시피 카드 목록 ===== */
 .card {

@@ -36,6 +36,7 @@ let recipes = loadRecipes();
 let currentId = null; // 지금 보고 있는 레시피 (null이면 목록 화면)
 let searchText = "";
 let listFilter = "all"; // all | todo(해먹고 싶은) | done(만들어본)
+let tagFilter = null; // 분류 칩에서 고른 태그 (null이면 전부)
 // server.py로 실행 중이면 true (영상에서 레시피 가져오기 버튼 표시). 인터넷에 올린 버전에서는 false.
 let serverOk = false;
 fetch("api/status").then((r) => r.json()).then((s) => { serverOk = !!s.video; render(); }).catch(() => {});
@@ -165,12 +166,21 @@ function renderList() {
 
   const q = searchText.trim().toLowerCase();
   const todoCount = recipes.filter((r) => r.logs.length === 0).length;
-  const filtered = recipes
+  const base = recipes.filter((r) => listFilter === "all" || (listFilter === "todo" ? r.logs.length === 0 : r.logs.length > 0));
+
+  // 지금 보고 있는 탭에서 많이 쓰인 태그 8개를 분류 칩으로
+  const tagCounts = {};
+  base.forEach((r) => new Set(splitTags(r.tags)).forEach((t) => { tagCounts[t] = (tagCounts[t] || 0) + 1; }));
+  const topTags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  if (tagFilter && !tagCounts[tagFilter]) tagFilter = null;
+
+  const filtered = base
     .filter((r) => !q || [r.title, r.tags].join(" ").toLowerCase().includes(q))
-    .filter((r) => listFilter === "all" || (listFilter === "todo" ? r.logs.length === 0 : r.logs.length > 0))
+    .filter((r) => !tagFilter || splitTags(r.tags).includes(tagFilter))
     .sort((a, b) => (lastCooked(b) || b.createdAt).localeCompare(lastCooked(a) || a.createdAt));
 
   const chip = (key, label) => `<button class="chip ${listFilter === key ? "on" : ""}" data-filter="${key}">${label}</button>`;
+  const tagChip = ([t, n]) => `<button class="chip tag-chip ${tagFilter === t ? "on" : ""}" data-tag="${esc(t)}">${esc(t)} ${n}</button>`;
   app.innerHTML = `
     <input class="search" id="search" type="text" placeholder="🔍 요리 이름, 태그로 검색" value="${esc(searchText)}">
     <div class="chips">
@@ -178,12 +188,16 @@ function renderList() {
       ${chip("todo", `해먹고 싶은 ${todoCount ? `(${todoCount})` : ""}`)}
       ${chip("done", "만들어본")}
     </div>
+    ${topTags.length ? `<div class="chips tag-row">${topTags.map(tagChip).join("")}</div>` : ""}
     <div id="list">
-      ${filtered.map(cardHtml).join("") || `<p class="empty">${listFilter === "todo" ? "해먹고 싶은 요리를 링크로 저장해두세요." : "검색 결과가 없어요."}</p>`}
+      ${filtered.map(cardHtml).join("") || `<p class="empty">${listFilter === "todo" && !q && !tagFilter ? "해먹고 싶은 요리를 링크로 저장해두세요." : "검색 결과가 없어요."}</p>`}
     </div>`;
 
   app.querySelectorAll("[data-filter]").forEach((b) =>
-    b.addEventListener("click", () => { listFilter = b.dataset.filter; renderList(); })
+    b.addEventListener("click", () => { listFilter = b.dataset.filter; tagFilter = null; renderList(); })
+  );
+  app.querySelectorAll("[data-tag]").forEach((b) =>
+    b.addEventListener("click", () => { tagFilter = tagFilter === b.dataset.tag ? null : b.dataset.tag; renderList(); })
   );
   const search = document.getElementById("search");
   search.addEventListener("input", (e) => {
